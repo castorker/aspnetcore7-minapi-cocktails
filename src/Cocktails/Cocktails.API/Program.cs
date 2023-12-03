@@ -1,6 +1,9 @@
 using AutoMapper;
 using Cocktails.API.DbContexts;
+using Cocktails.API.Entities;
 using Cocktails.API.Models;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,7 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 // register the DbContext on the container
 // getting the connection string from appSettings
 builder.Services.AddDbContext<CocktailsDbContext>(o =>
-    o.UseSqlite(builder.Configuration["ConnectionStrings:CocktailsDBConnectionString"]));
+    o.UseSqlite(builder
+    .Configuration["ConnectionStrings:CocktailsDBConnectionString"]));
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
@@ -20,33 +24,72 @@ var app = builder.Build();
 
 app.UseHttpsRedirection();
 
-app.MapGet("/cocktails", async (CocktailsDbContext cocktailsDbContext, 
-    IMapper mapper) =>
+app.MapGet("/cocktails", 
+    async Task<Ok<IEnumerable<CocktailDto>>> 
+    (CocktailsDbContext cocktailsDbContext, 
+    [FromServices] IMapper mapper,
+    [FromQuery] string? name) =>
 {
-    return mapper.Map<IEnumerable<CocktailDto>>(await cocktailsDbContext.Cocktails.ToListAsync());
+    return TypedResults.Ok(mapper.Map<IEnumerable<CocktailDto>>(
+        await cocktailsDbContext.Cocktails
+        .Where(c => name == null || c.Name.Contains(name))
+        .ToListAsync()));
 });
 
-app.MapGet("/cocktails/{cocktailId:int}", async (CocktailsDbContext cocktailsDbContext, 
-    IMapper mapper,
-    int cocktailId) =>
+app.MapGet("/cocktails/{cocktailId:int}", 
+    async Task<Results<NotFound, Ok<CocktailDto>>> 
+    (CocktailsDbContext cocktailsDbContext,
+    [FromServices] IMapper mapper,
+    [FromRoute] int cocktailId) =>
 {
-    return mapper.Map<CocktailDto>(await cocktailsDbContext.Cocktails.FirstOrDefaultAsync(c => c.Id == cocktailId));
+    var cocktailEntity = await cocktailsDbContext.Cocktails
+        .FirstOrDefaultAsync(c => c.Id == cocktailId);
+
+    if (cocktailEntity == null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    return TypedResults.Ok(mapper.Map<CocktailDto>(cocktailEntity));
 });
 
-app.MapGet("/cocktails/{cocktailName}", async (CocktailsDbContext cocktailsDbContext,
-    IMapper mapper, 
-    string cocktailName) =>
+app.MapGet("/cocktails/{cocktailName}", 
+    async Task<Results<NotFound, Ok<CocktailDto>>>
+    (CocktailsDbContext cocktailsDbContext,
+    [FromServices] IMapper mapper,
+    [FromRoute] string cocktailName) =>
 {
-    return mapper.Map<CocktailDto>(await cocktailsDbContext.Cocktails.FirstOrDefaultAsync(c => c.Name == cocktailName));
+    var cocktailEntity = await cocktailsDbContext.Cocktails
+        .FirstOrDefaultAsync(c => c.Name == cocktailName);
+
+    if (cocktailEntity == null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    return TypedResults.Ok(mapper.Map<CocktailDto>(
+        await cocktailsDbContext.Cocktails
+        .FirstOrDefaultAsync(c => c.Name == cocktailName)));
 });
 
-app.MapGet("/cocktails/{cocktailId}/ingredients", async (CocktailsDbContext cocktailsDbContext,
-    IMapper mapper, 
-    int cocktailId) =>
+app.MapGet("/cocktails/{cocktailId}/ingredients", 
+    async Task<Results<NotFound, Ok<IEnumerable<IngredientDto>>>>
+    (CocktailsDbContext cocktailsDbContext,
+    [FromServices] IMapper mapper,
+    [FromRoute] int cocktailId) =>
 {
-    return mapper.Map<IEnumerable<IngredientDto>>((await cocktailsDbContext.Cocktails
+    var cocktailEntity = await cocktailsDbContext.Cocktails
+        .FirstOrDefaultAsync(c => c.Id == cocktailId);
+
+    if (cocktailEntity == null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    return TypedResults.Ok(mapper.Map<IEnumerable<IngredientDto>>((
+        await cocktailsDbContext.Cocktails
         .Include(c => c.Ingredients)
-        .FirstOrDefaultAsync(c => c.Id == cocktailId))?.Ingredients);
+        .FirstOrDefaultAsync(c => c.Id == cocktailId))?.Ingredients));
 });
 
 // recreate & migrate the database on each run, for development purposes
