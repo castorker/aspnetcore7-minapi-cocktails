@@ -51,7 +51,7 @@ app.MapGet("/cocktails/{cocktailId:int}",
     }
 
     return TypedResults.Ok(mapper.Map<CocktailDto>(cocktailEntity));
-});
+}).WithName("GetCocktail");
 
 app.MapGet("/cocktails/{cocktailName}", 
     async Task<Results<NotFound, Ok<CocktailDto>>>
@@ -90,6 +90,73 @@ app.MapGet("/cocktails/{cocktailId}/ingredients",
         await cocktailsDbContext.Cocktails
         .Include(c => c.Ingredients)
         .FirstOrDefaultAsync(c => c.Id == cocktailId))?.Ingredients));
+});
+
+app.MapPost("/cocktails", 
+    async Task<CreatedAtRoute<CocktailDto>> 
+    (CocktailsDbContext cocktailsDbContext, 
+    IMapper mapper,
+    [FromBody] CocktailForCreationDto cocktailForCreationDto
+    ) =>
+{
+    var cocktailEntity = mapper.Map<Cocktail>(cocktailForCreationDto);
+
+    cocktailsDbContext.Add(cocktailEntity);
+    await cocktailsDbContext.SaveChangesAsync();
+
+    var cocktailToReturn = mapper.Map<CocktailDto>(cocktailEntity);
+
+    return TypedResults.CreatedAtRoute(cocktailToReturn, 
+        "GetCocktail", 
+        new { cocktailId = cocktailToReturn.Id });
+});
+
+app.MapPut("/cocktails/{cocktailId:int}", 
+    async Task<Results<BadRequest, NotFound, NoContent>>
+    (CocktailsDbContext cocktailsDbContext, 
+    IMapper mapper,
+    int cocktailId,
+    CocktailForUpdateDto cocktailForUpdateDto
+    ) =>
+{
+    if (cocktailId != cocktailForUpdateDto.Id)
+    {
+        return TypedResults.BadRequest();
+    }
+
+    var cocktailEntity = await cocktailsDbContext.Cocktails
+        .FirstOrDefaultAsync(c => c.Id == cocktailId);
+
+    if (cocktailEntity == null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    mapper.Map(cocktailForUpdateDto, cocktailEntity);
+
+    await cocktailsDbContext.SaveChangesAsync();
+
+    return TypedResults.NoContent();
+});
+
+app.MapDelete("/cocktails/{cocktailId:int}", 
+    async Task<Results<NotFound, NoContent>> 
+    (CocktailsDbContext cocktailsDbContext, 
+    int cocktailId) =>
+{
+    var cocktailEntity = await cocktailsDbContext.Cocktails
+        .FirstOrDefaultAsync(c => c.Id == cocktailId);
+
+    if (cocktailEntity == null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    cocktailsDbContext.Cocktails.Remove(cocktailEntity);
+
+    await cocktailsDbContext.SaveChangesAsync();
+
+    return TypedResults.NoContent();
 });
 
 // recreate & migrate the database on each run, for development purposes

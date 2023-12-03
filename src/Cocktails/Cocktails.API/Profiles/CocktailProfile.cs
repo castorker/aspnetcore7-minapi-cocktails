@@ -9,6 +9,8 @@ namespace Cocktails.API.Profiles
         public CocktailProfile()
         {
             CreateMap<Cocktail, CocktailDto>();
+            CreateMap<CocktailForCreationDto, Cocktail>();
+            CreateMap<CocktailForUpdateDto, Cocktail>();
         }        
     }
 }
