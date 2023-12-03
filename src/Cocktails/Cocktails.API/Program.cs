@@ -21,6 +21,11 @@ app.MapGet("/cocktails", async (CocktailsDbContext cocktailsDbContext) =>
     return await cocktailsDbContext.Cocktails.ToListAsync();
 });
 
+app.MapGet("/cocktails/{cocktailId:int}", async (CocktailsDbContext cocktailsDbContext, int cocktailId) =>
+{
+    return await cocktailsDbContext.Cocktails.FirstOrDefaultAsync(c => c.Id == cocktailId);
+});
+
 // recreate & migrate the database on each run, for development purposes
 using (var serviceScope = app.Services.GetService<IServiceScopeFactory>().CreateScope())
 {
