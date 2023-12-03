@@ -24,7 +24,11 @@ var app = builder.Build();
 
 app.UseHttpsRedirection();
 
-app.MapGet("/cocktails", 
+var cocktailsEndpoints = app.MapGroup("/cocktails");
+var cocktailWithIntIdEndpoints = cocktailsEndpoints.MapGroup("/{cocktailId:int}");
+var ingredientsEndpoints = cocktailWithIntIdEndpoints.MapGroup("/ingredients");
+
+cocktailsEndpoints.MapGet("", 
     async Task<Ok<IEnumerable<CocktailDto>>> 
     (CocktailsDbContext cocktailsDbContext, 
     [FromServices] IMapper mapper,
@@ -36,7 +40,7 @@ app.MapGet("/cocktails",
         .ToListAsync()));
 });
 
-app.MapGet("/cocktails/{cocktailId:int}", 
+cocktailWithIntIdEndpoints.MapGet("", 
     async Task<Results<NotFound, Ok<CocktailDto>>> 
     (CocktailsDbContext cocktailsDbContext,
     [FromServices] IMapper mapper,
@@ -53,7 +57,7 @@ app.MapGet("/cocktails/{cocktailId:int}",
     return TypedResults.Ok(mapper.Map<CocktailDto>(cocktailEntity));
 }).WithName("GetCocktail");
 
-app.MapGet("/cocktails/{cocktailName}", 
+cocktailsEndpoints.MapGet("/{cocktailName}", 
     async Task<Results<NotFound, Ok<CocktailDto>>>
     (CocktailsDbContext cocktailsDbContext,
     [FromServices] IMapper mapper,
@@ -72,7 +76,7 @@ app.MapGet("/cocktails/{cocktailName}",
         .FirstOrDefaultAsync(c => c.Name == cocktailName)));
 });
 
-app.MapGet("/cocktails/{cocktailId}/ingredients", 
+ingredientsEndpoints.MapGet("", 
     async Task<Results<NotFound, Ok<IEnumerable<IngredientDto>>>>
     (CocktailsDbContext cocktailsDbContext,
     [FromServices] IMapper mapper,
@@ -92,7 +96,7 @@ app.MapGet("/cocktails/{cocktailId}/ingredients",
         .FirstOrDefaultAsync(c => c.Id == cocktailId))?.Ingredients));
 });
 
-app.MapPost("/cocktails", 
+cocktailsEndpoints.MapPost("", 
     async Task<CreatedAtRoute<CocktailDto>> 
     (CocktailsDbContext cocktailsDbContext, 
     IMapper mapper,
@@ -111,7 +115,7 @@ app.MapPost("/cocktails",
         new { cocktailId = cocktailToReturn.Id });
 });
 
-app.MapPut("/cocktails/{cocktailId:int}", 
+cocktailWithIntIdEndpoints.MapPut("", 
     async Task<Results<BadRequest, NotFound, NoContent>>
     (CocktailsDbContext cocktailsDbContext, 
     IMapper mapper,
@@ -139,7 +143,7 @@ app.MapPut("/cocktails/{cocktailId:int}",
     return TypedResults.NoContent();
 });
 
-app.MapDelete("/cocktails/{cocktailId:int}", 
+cocktailWithIntIdEndpoints.MapDelete("", 
     async Task<Results<NotFound, NoContent>> 
     (CocktailsDbContext cocktailsDbContext, 
     int cocktailId) =>
