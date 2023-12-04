@@ -3,7 +3,6 @@ using Cocktails.API.DbContexts;
 using Cocktails.API.Entities;
 using Cocktails.API.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cocktails.API.EndpointHandlers
@@ -12,9 +11,12 @@ namespace Cocktails.API.EndpointHandlers
     {
         public static async Task<Ok<IEnumerable<CocktailDto>>> GetCocktailsAsync(
             CocktailsDbContext cocktailsDbContext,
-            [FromServices] IMapper mapper,
-            [FromQuery] string? name)
+            IMapper mapper,
+            ILogger<CocktailDto> logger,
+            string? name)
         {
+            logger.LogInformation("Getting cocktails...");
+
             return TypedResults.Ok(mapper.Map<IEnumerable<CocktailDto>>(
                 await cocktailsDbContext.Cocktails
                 .Where(c => name == null || c.Name.Contains(name))
@@ -23,14 +25,18 @@ namespace Cocktails.API.EndpointHandlers
 
         public static async Task<Results<NotFound, Ok<CocktailDto>>> GetCocktailByIdAsync(
             CocktailsDbContext cocktailsDbContext,
-            [FromServices] IMapper mapper,
-            [FromRoute] int cocktailId)
+            IMapper mapper,
+            ILogger<CocktailDto> logger,
+            int cocktailId)
         {
             var cocktailEntity = await cocktailsDbContext.Cocktails
                 .FirstOrDefaultAsync(c => c.Id == cocktailId);
 
             if (cocktailEntity == null)
             {
+                logger.LogInformation(
+                    $"Cocktail with id {cocktailId} was not found in the cocktails.");
+
                 return TypedResults.NotFound();
             }
 
@@ -39,14 +45,18 @@ namespace Cocktails.API.EndpointHandlers
 
         public static async Task<Results<NotFound, Ok<CocktailDto>>> GetCocktailByNameAsync(
             CocktailsDbContext cocktailsDbContext,
-            [FromServices] IMapper mapper,
-            [FromRoute] string cocktailName)
+            IMapper mapper,
+            ILogger<CocktailDto> logger,
+            string cocktailName)
         {
             var cocktailEntity = await cocktailsDbContext.Cocktails
                 .FirstOrDefaultAsync(c => c.Name == cocktailName);
 
             if (cocktailEntity == null)
             {
+                logger.LogInformation(
+                    $"Cocktail with name {cocktailName} was not found in the cocktails.");
+
                 return TypedResults.NotFound();
             }
 
@@ -58,7 +68,7 @@ namespace Cocktails.API.EndpointHandlers
         public static async Task<CreatedAtRoute<CocktailDto>> CreateCocktailAsync(
             CocktailsDbContext cocktailsDbContext,
             IMapper mapper,
-            [FromBody] CocktailForCreationDto cocktailForCreationDto)
+            CocktailForCreationDto cocktailForCreationDto)
         {
             var cocktailEntity = mapper.Map<Cocktail>(cocktailForCreationDto);
 
@@ -76,11 +86,16 @@ namespace Cocktails.API.EndpointHandlers
         public static async Task<Results<BadRequest, NotFound, NoContent>> UpdateCocktailAsync(
             CocktailsDbContext cocktailsDbContext,
             IMapper mapper,
+            ILogger<CocktailDto> logger,
             int cocktailId,
             CocktailForUpdateDto cocktailForUpdateDto)
         {
             if (cocktailId != cocktailForUpdateDto.Id)
             {
+                logger.LogInformation(
+                    $"Cocktail Id in the query string {cocktailId} different from the " +
+                    $"cocktail Id in the request body {cocktailForUpdateDto.Id}.");
+
                 return TypedResults.BadRequest();
             }
 
@@ -89,6 +104,9 @@ namespace Cocktails.API.EndpointHandlers
 
             if (cocktailEntity == null)
             {
+                logger.LogInformation(
+                    $"Cocktail with id {cocktailId} was not found in the cocktails.");
+
                 return TypedResults.NotFound();
             }
 
@@ -101,6 +119,7 @@ namespace Cocktails.API.EndpointHandlers
 
         public static async Task<Results<NotFound, NoContent>> DeleteCocktailAsync(
             CocktailsDbContext cocktailsDbContext,
+            ILogger<CocktailDto> logger,
             int cocktailId)
         {
             var cocktailEntity = await cocktailsDbContext.Cocktails
@@ -108,6 +127,9 @@ namespace Cocktails.API.EndpointHandlers
 
             if (cocktailEntity == null)
             {
+                logger.LogInformation(
+                    $"Cocktail with id {cocktailId} was not found in the cocktails.");
+
                 return TypedResults.NotFound();
             }
 

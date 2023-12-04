@@ -11,6 +11,7 @@ namespace Cocktails.API.EndpointHandlers
         public static async Task<Results<NotFound, Ok<IEnumerable<IngredientDto>>>> GetIngredientsAsync(
             CocktailsDbContext cocktailsDbContext,
             IMapper mapper,
+            ILogger<CocktailDto> logger,
             int cocktailId)
         {
             var cocktailEntity = await cocktailsDbContext.Cocktails
@@ -18,6 +19,9 @@ namespace Cocktails.API.EndpointHandlers
 
             if (cocktailEntity == null)
             {
+                logger.LogInformation(
+                    $"Cocktail with id {cocktailId} was not found in the cocktails.");
+
                 return TypedResults.NotFound();
             }
 
