@@ -3,6 +3,7 @@ using Cocktails.API.Extensions;
 using Cocktails.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,33 @@ builder.Services.AddAuthorizationBuilder()
 
 builder.Services.AddSingleton<IAuthorizationHandler, MinimumAgeHandler>();
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("TokenAuthNZ",
+        new()
+        {
+            Name = "Authorization",
+            Description = "Token-based authentication and authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "Bearer",
+            In = ParameterLocation.Header
+        });
+    options.AddSecurityRequirement(new()
+        {
+            {
+                new()
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "TokenAuthNZ"
+                    }
+                }, new List<string>()
+            }
+        });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -39,6 +67,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseAuthentication();
 app.UseAuthorization();

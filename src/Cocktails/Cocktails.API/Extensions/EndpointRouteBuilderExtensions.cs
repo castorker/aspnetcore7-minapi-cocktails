@@ -1,4 +1,5 @@
 ﻿using Cocktails.API.EndpointHandlers;
+using Cocktails.API.Models;
 
 namespace Cocktails.API.Extensions
 {
@@ -15,13 +16,27 @@ namespace Cocktails.API.Extensions
             cocktailsEndpoints.MapGet("", CocktailsHandlers.GetCocktailsAsync);
 
             cocktailWithIntIdEndpoints.MapGet("", CocktailsHandlers.GetCocktailByIdAsync)
-                .WithName("GetCocktail");
+                .WithName("GetCocktail")
+                .WithOpenApi()
+                .WithSummary("Get a cocktail by providing an id.")
+                .WithDescription("Cocktails are identified by a URI containing a cocktail identifier. " +
+                    "This identifier is an integer. " +
+                    "You can get one specific cocktail via this endpoint by providing the identifier."); ;
 
             cocktailsEndpoints.MapGet("/{cocktailName}", CocktailsHandlers.GetCocktailByNameAsync)
-                .AllowAnonymous();
+                .AllowAnonymous()
+                .WithOpenApi(operation =>
+                {
+                    operation.Deprecated = true;
+                    return operation;
+                });
 
             cocktailsEndpoints.MapPost("", CocktailsHandlers.CreateCocktailAsync)
-                .RequireAuthorization("MustBeAtLeast18YearsOldAndAdmin");
+                .RequireAuthorization("MustBeAtLeast18YearsOldAndAdmin")
+                .ProducesValidationProblem(400)
+                .Accepts<CocktailForCreationDto>(
+                    "application/json",
+                    "application/vnd.marvin.cocktailforcreation+json");
 
             cocktailWithIntIdEndpoints.MapPut("", CocktailsHandlers.UpdateCocktailAsync);
 
