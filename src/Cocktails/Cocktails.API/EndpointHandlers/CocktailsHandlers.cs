@@ -4,6 +4,7 @@ using Cocktails.API.Entities;
 using Cocktails.API.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Cocktails.API.EndpointHandlers
 {
@@ -11,10 +12,13 @@ namespace Cocktails.API.EndpointHandlers
     {
         public static async Task<Ok<IEnumerable<CocktailDto>>> GetCocktailsAsync(
             CocktailsDbContext cocktailsDbContext,
+            ClaimsPrincipal claimsPrincipal,
             IMapper mapper,
             ILogger<CocktailDto> logger,
             string? name)
         {
+            await Console.Out.WriteLineAsync($"User authenticated? {claimsPrincipal.Identity?.IsAuthenticated}");
+
             logger.LogInformation("Getting cocktails...");
 
             return TypedResults.Ok(mapper.Map<IEnumerable<CocktailDto>>(

@@ -1,5 +1,7 @@
 using Cocktails.API.DbContexts;
 using Cocktails.API.Extensions;
+using Cocktails.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +18,18 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 builder.Services.AddProblemDetails();
 
+builder.Services.AddAuthentication().AddJwtBearer();
+builder.Services.AddAuthorization();
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("MustBeAtLeast18YearsOldAndAdmin", policy =>
+    policy
+        .RequireAuthenticatedUser()
+        .RequireRole("admin")
+        .Requirements.Add(new MinimumAgeRequirement(18)));
+
+builder.Services.AddSingleton<IAuthorizationHandler, MinimumAgeHandler>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -25,6 +39,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.RegisterCocktailsEndpoints();
 app.RegisterIngredientsEndpoints();
